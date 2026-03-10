@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeCollab -- Collaborative Dev Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #070b14;
+    --bg2:     #0d1426;
+    --bg3:     #111a30;
+    --border:  rgba(0,247,255,0.15);
+    --border2: rgba(0,247,255,0.3);
+    --neon:    #00ff9d;
+    --cyan:    #00f7ff;
+    --purple:  #a855f7;
+    --pink:    #ec4899;
+    --text:    #e2e8f0;
+    --muted:   rgba(226,232,240,0.45);
+    --danger:  #f43f5e;
+    --warning: #f59e0b;
+    --success: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* AUTH */
+  #auth-screen { position:fixed; inset:0; background:var(--bg); z-index:9999; display:flex; align-items:center; justify-content:center; }
+  #auth-screen.hidden { display:none; }
+  .auth-box { background:var(--bg2); border:1px solid var(--border2); border-radius:18px; padding:40px; width:100%; max-width:420px; box-shadow:0 0 60px rgba(0,247,255,0.07); }
+  .auth-logo { text-align:center; margin-bottom:32px; }
+  .auth-logo-icon { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; background:linear-gradient(135deg,var(--neon),var(--cyan)); border-radius:14px; font-size:20px; font-weight:900; color:#000; font-family:'JetBrains Mono',monospace; margin-bottom:12px; box-shadow:0 0 24px rgba(0,255,157,0.35); }
+  .auth-logo h1 { font-size:22px; font-weight:700; color:var(--neon); }
+  .auth-logo p  { font-size:13px; color:var(--muted); margin-top:4px; }
+  .auth-tabs { display:flex; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:3px; margin-bottom:28px; }
+  .auth-tab { flex:1; text-align:center; padding:9px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; color:var(--muted); border:none; background:none; font-family:'Space Grotesk',sans-serif; }
+  .auth-tab.active { background:linear-gradient(135deg,var(--neon),var(--cyan)); color:#000; }
+  .auth-panel { display:none; }
+  .auth-panel.active { display:block; }
+  .auth-error { background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); color:var(--danger); border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; display:none; }
+  .auth-error.show { display:block; }
+  .auth-footer { text-align:center; margin-top:24px; font-size:12px; color:var(--muted); }
+  .input-icon-wrap { position:relative; }
+  .input-icon-wrap .input-prefix { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--cyan); pointer-events:none; }
+  .input-icon-wrap .input { padding-left:32px; }
+  .password-wrap { position:relative; }
+  .password-toggle { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); cursor:pointer; font-size:11px; font-family:'JetBrains Mono',monospace; }
+  .password-toggle:hover { color:var(--cyan); }
+  .strength-bar { height:3px; border-radius:2px; background:var(--border); margin-top:6px; overflow:hidden; }
+  .strength-fill { height:100%; border-radius:2px; transition:width 0.3s,background 0.3s; width:0%; }
+  .strength-label { font-size:11px; color:var(--muted); margin-top:3px; }
+
+  /* HEADER */
+  header { height:60px; background:rgba(13,20,38,0.95); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 24px; position:sticky; top:0; z-index:100; backdrop-filter:blur(12px); }
+  .logo { display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .logo-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--neon),var(--cyan)); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; color:#000; font-family:'JetBrains Mono',monospace; box-shadow:0 0 16px rgba(0,255,157,0.4); }
+  .logo-text { font-size:18px; font-weight:700; color:var(--neon); letter-spacing:-0.5px; }
+  nav { margin-left:auto; display:flex; gap:4px; }
+  .nav-btn { background:none; border:none; color:var(--muted); font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:500; padding:8px 14px; border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+  .nav-btn:hover, .nav-btn.active { background:rgba(0,247,255,0.08); color:var(--cyan); }
+  .header-right { margin-left:20px; display:flex; align-items:center; gap:10px; }
+  .avatar-btn { width:36px; height:36px; border-radius:50%; border:2px solid var(--border2); background:linear-gradient(135deg,var(--cyan),var(--neon)); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:#000; cursor:pointer; position:relative; }
+  .online-dot { width:10px; height:10px; background:var(--neon); border-radius:50%; border:2px solid var(--bg); position:absolute; bottom:-1px; right:-1px; }
+  #db-status { font-size:11px; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:5px; cursor:default; font-family:'JetBrains Mono',monospace; }
+  #db-status.ready   { background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.25); }
+  #db-status.loading { background:rgba(245,158,11,0.12); color:var(--warning); border:1px solid rgba(245,158,11,0.25); }
+  #db-status.error   { background:rgba(244,63,94,0.12); color:var(--danger); border:1px solid rgba(244,63,94,0.25); }
+
+  /* PAGES */
+  .page { display:none; animation:fadeIn 0.3s ease; }
+  .page.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  /* LAYOUT */
+  .main-wrap { padding:32px 24px; max-width:1280px; margin:0 auto; }
+
+  /* PANEL */
+  .panel { background:var(--bg2); border:1px solid var(--border); border-radius:14px; box-shadow:0 0 20px rgba(0,247,255,0.04); }
+
+  /* BUTTONS */
+  .btn { display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; white-space:nowrap; }
+  .btn-primary { background:linear-gradient(135deg,var(--neon),var(--cyan)); color:#000; box-shadow:0 0 18px rgba(0,255,157,0.3); }
+  .btn-primary:hover { box-shadow:0 0 28px rgba(0,255,157,0.5); transform:translateY(-1px); }
+  .btn-outline { background:transparent; border:1px solid var(--border2); color:var(--cyan); }
+  .btn-outline:hover { background:rgba(0,247,255,0.08); transform:translateY(-1px); }
+  .btn-ghost { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.08); }
+  .btn-danger { background:rgba(244,63,94,0.15); border:1px solid rgba(244,63,94,0.3); color:var(--danger); }
+  .btn-danger:hover { background:rgba(244,63,94,0.25); }
+  .btn-sm { padding:6px 12px; font-size:12px; border-radius:7px; }
+  .btn-lg { padding:13px 26px; font-size:15px; border-radius:12px; }
+  .btn-icon { padding:9px; width:38px; height:38px; justify-content:center; }
+  .btn:active { transform:scale(0.97)!important; }
+
+  /* INPUTS */
+  .input, .textarea, .select { background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:14px; border-radius:10px; padding:10px 14px; width:100%; outline:none; transition:border-color 0.2s,box-shadow 0.2s; }
+  .input:focus, .textarea:focus, .select:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(0,247,255,0.1); }
+  .textarea { resize:vertical; min-height:80px; }
+  .select { cursor:pointer; }
+  .select option { background:var(--bg2); }
+  label { font-size:13px; font-weight:500; color:var(--muted); margin-bottom:5px; display:block; }
+  .form-group { margin-bottom:16px; }
+
+  /* BADGE */
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-neon   { background:rgba(0,255,157,0.12);  color:var(--neon);   border:1px solid rgba(0,255,157,0.25); }
+  .badge-cyan   { background:rgba(0,247,255,0.12);  color:var(--cyan);   border:1px solid rgba(0,247,255,0.25); }
+  .badge-purple { background:rgba(168,85,247,0.12); color:var(--purple); border:1px solid rgba(168,85,247,0.25); }
+  .badge-danger { background:rgba(244,63,94,0.12);  color:var(--danger); border:1px solid rgba(244,63,94,0.25); }
+
+  /* TOAST */
+  #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:10px; }
+  .toast { background:var(--bg3); border:1px solid var(--border2); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:10px; font-size:14px; min-width:240px; animation:slideIn 0.3s ease; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+  .toast.success { border-color:rgba(16,185,129,0.4); }
+  .toast.error   { border-color:rgba(244,63,94,0.4); }
+  .toast.info    { border-color:rgba(0,247,255,0.4); }
+  .toast-icon { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; }
+  .toast.success .toast-icon { color:var(--success); }
+  .toast.error   .toast-icon { color:var(--danger); }
+  .toast.info    .toast-icon { color:var(--cyan); }
+  @keyframes slideIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes slideOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(20px)} }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(7,11,20,0.8); backdrop-filter:blur(6px); z-index:500; display:none; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--bg2); border:1px solid var(--border2); border-radius:16px; padding:28px; width:90%; max-width:520px; animation:modalIn 0.25s ease; box-shadow:0 24px 60px rgba(0,0,0,0.5); }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.93)} to{opacity:1;transform:scale(1)} }
+  .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .modal-title { font-size:18px; font-weight:700; }
+  .modal-close { width:32px; height:32px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:all 0.2s; }
+  .modal-close:hover { background:rgba(244,63,94,0.12); color:var(--danger); }
+  .modal-footer { margin-top:24px; display:flex; gap:10px; justify-content:flex-end; }
+
+  /* HOME */
+  .hero { padding:64px 0 40px; text-align:center; }
+  .hero-tag { display:inline-flex; align-items:center; gap:6px; background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.2); color:var(--neon); font-size:12px; font-weight:600; padding:5px 12px; border-radius:20px; margin-bottom:20px; letter-spacing:0.5px; font-family:'JetBrains Mono',monospace; }
+  .hero h1 { font-size:clamp(32px,5vw,56px); font-weight:700; line-height:1.15; letter-spacing:-1.5px; margin-bottom:16px; }
+  .hero h1 span { color:var(--neon); }
+  .hero p { font-size:16px; color:var(--muted); max-width:540px; margin:0 auto 32px; line-height:1.7; }
+  .hero-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:48px 0; }
+  .feature-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; transition:all 0.25s; }
+  .feature-card:hover { border-color:var(--border2); transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,247,255,0.07); }
+  .feature-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; font-family:'JetBrains Mono',monospace; margin-bottom:14px; }
+  .feature-icon.neon   { background:rgba(0,255,157,0.1);  color:var(--neon); }
+  .feature-icon.cyan   { background:rgba(0,247,255,0.1);  color:var(--cyan); }
+  .feature-icon.purple { background:rgba(168,85,247,0.1); color:var(--purple); }
+  .feature-icon.pink   { background:rgba(236,72,153,0.1); color:var(--pink); }
+  .feature-card h3 { font-size:15px; font-weight:600; margin-bottom:8px; }
+  .feature-card p  { font-size:13px; color:var(--muted); line-height:1.6; }
+  .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-bottom:48px; }
+  .stat-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; text-align:center; }
+  .stat-value { font-size:28px; font-weight:700; color:var(--neon); }
+  .stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
+
+  /* PROJECTS */
+  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-header h2 { font-size:22px; font-weight:700; }
+  .projects-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+  .project-card { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:20px; transition:all 0.25s; }
+  .project-card:hover { border-color:var(--border2); transform:translateY(-2px); box-shadow:0 8px 25px rgba(0,247,255,0.06); }
+  .project-lang-dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .project-name { font-size:16px; font-weight:600; margin-bottom:4px; }
+  .project-desc { font-size:13px; color:var(--muted); line-height:1.5; margin-bottom:16px; }
+  .project-meta { display:flex; align-items:center; gap:12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); padding-top:12px; font-family:'JetBrains Mono',monospace; }
+  .project-actions { display:flex; gap:8px; margin-top:14px; }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); font-size:14px; }
+  .empty-state p { margin-bottom:16px; }
+
+  /* CHAT */
+  .chat-layout { display:grid; grid-template-columns:230px 1fr 0px; gap:14px; height:calc(100vh - 130px); transition:grid-template-columns 0.25s ease; }
+  .chat-layout.members-open { grid-template-columns:230px 1fr 220px; }
+  .chat-sidebar { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .chat-sidebar-header { padding:16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .chat-sidebar-header h3 { font-size:14px; font-weight:600; }
+  .channel-list { padding:8px; flex:1; overflow-y:auto; }
+  .channel-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer; transition:all 0.15s; font-size:14px; border:1px solid transparent; }
+  .channel-item:hover { background:rgba(0,247,255,0.05); }
+  .channel-item.active { background:rgba(0,247,255,0.1); border-color:var(--border); color:var(--cyan); }
+  .channel-dot { width:8px; height:8px; border-radius:50%; background:var(--border2); flex-shrink:0; }
+  .channel-dot.online { background:var(--neon); box-shadow:0 0 6px rgba(0,255,157,0.5); }
+  .chat-main { background:var(--bg2); border:1px solid var(--border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; }
+  .chat-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+  .chat-header h3 { font-size:15px; font-weight:600; }
+  .chat-header .sub { font-size:12px; color:var(--muted); }
+  .messages-area { flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:16px; }
+  .messages-area::-webkit-scrollbar { width:4px; }
+  .msg { display:flex; gap:12px; animation:msgIn 0.2s ease; }
+  .msg.own { flex-direction:row-reverse; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  .msg-avatar { width:34px; height:34px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#000; }
+  .msg-body { max-width:65%; }
+  .msg-meta { display:flex; align-items:center; gap:8px; margin-bottom:4px; font-size:12px; }
+  .msg.own .msg-meta { flex-direction:row-reverse; }
+  .msg-name { font-weight:600; font-size:13px; }
+  .msg-time { color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .msg-bubble { background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:12px; border-top-left-radius:4px; padding:10px 14px; font-size:14px; line-height:1.6; word-break:break-word; }
+  .msg.own .msg-bubble { background:rgba(0,255,157,0.08); border-color:rgba(0,255,157,0.2); border-top-left-radius:12px; border-top-right-radius:4px; }
+  .msg-code { font-family:'JetBrains Mono',monospace; font-size:12px; background:rgba(7,11,20,0.8); border-left:3px solid var(--neon); padding:10px 12px; border-radius:6px; overflow-x:auto; white-space:pre; margin-top:8px; }
+  .chat-input-area { padding:14px 18px; border-top:1px solid var(--border); display:flex; gap:10px; align-items:flex-end; }
+  .chat-input-wrap { flex:1; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; padding:10px 14px; display:flex; flex-direction:column; gap:8px; transition:border-color 0.2s; }
+  .chat-input-wrap:focus-within { border-color:var(--cyan); }
+  #msg-input { background:none; border:none; outline:none; color:var(--text); font-family:'Space Grotesk',sans-serif; font-size:14px; width:100%; resize:none; min-height:20px; max-height:100px; line-height:1.5; }
+  .chat-input-tools { display:flex; gap:6px; }
+  .tool-btn { background:none; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:2px 6px; border-radius:4px; transition:color 0.15s; font-family:'JetBrains Mono',monospace; font-weight:600; }
+  .tool-btn:hover { color:var(--cyan); background:rgba(0,247,255,0.06); }
+
+  /* MEMBERS PANEL */
+  .members-panel { background:var(--bg2); border:1px solid var(--border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; width:0; opacity:0; transition:width 0.25s ease,opacity 0.25s ease; pointer-events:none; }
+  .chat-layout.members-open .members-panel { width:220px; opacity:1; pointer-events:auto; }
+  .members-panel-header { padding:14px 14px 10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:600; flex-shrink:0; }
+  .members-panel-footer { padding:10px; border-top:1px solid var(--border); flex-shrink:0; }
+  .member-row { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px; font-size:13px; transition:background 0.15s; }
+  .member-row:hover { background:rgba(0,247,255,0.05); }
+  .member-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#000; flex-shrink:0; }
+  .member-info { flex:1; min-width:0; }
+  .member-name  { font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .member-uname { font-size:11px; color:var(--muted); font-family:monospace; }
+  .member-kick  { background:none; border:none; color:var(--danger); cursor:pointer; font-size:11px; font-family:monospace; padding:2px 5px; border-radius:4px; opacity:0; transition:opacity 0.15s; }
+  .member-row:hover .member-kick { opacity:1; }
+  .members-section-label { font-size:10px; font-weight:700; letter-spacing:0.8px; color:var(--muted); padding:10px 10px 4px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+  .invite-suggestion { display:flex; align-items:center; gap:10px; padding:10px 14px; cursor:pointer; transition:background 0.15s; font-size:13px; }
+  .invite-suggestion:hover { background:rgba(0,247,255,0.08); }
+  .invite-suggestion.already-member { opacity:0.45; pointer-events:none; }
+
+  /* EDITOR */
+  .editor-layout { display:grid; grid-template-columns:1fr 1fr; gap:16px; height:calc(100vh - 130px); }
+  .editor-panel { background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .editor-toolbar { background:rgba(7,11,20,0.6); border-bottom:1px solid var(--border); padding:10px 14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .mac-dots { display:flex; gap:5px; margin-right:4px; }
+  .mac-dot { width:11px; height:11px; border-radius:50%; }
+  .mac-dot.red { background:#ff5f57; } .mac-dot.yellow { background:#ffbd2e; } .mac-dot.green { background:#28c840; }
+  .lang-tabs { display:flex; gap:4px; margin-left:8px; }
+  .lang-tab { padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:1px solid transparent; transition:all 0.15s; background:none; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .lang-tab:hover { background:rgba(255,255,255,0.06); color:var(--text); }
+  .lang-tab.active { background:rgba(0,247,255,0.12); border-color:var(--border2); color:var(--cyan); }
+  .editor-area { flex:1; display:flex; overflow:hidden; }
+  .line-numbers { background:rgba(7,11,20,0.4); border-right:1px solid var(--border); padding:16px 0; font-family:'JetBrains Mono',monospace; font-size:13px; color:rgba(255,255,255,0.2); text-align:right; user-select:none; min-width:44px; line-height:1.7; overflow:hidden; }
+  .line-numbers span { display:block; padding:0 10px; }
+  #code-editor { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.7; padding:16px; resize:none; tab-size:2; overflow-y:auto; }
+  .editor-status { background:rgba(7,11,20,0.6); border-top:1px solid var(--border); padding:5px 14px; display:flex; align-items:center; gap:16px; font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .status-item { display:flex; align-items:center; gap:5px; }
+  .preview-placeholder { height:100%; background:var(--bg3); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:var(--muted); margin:10px; border-radius:8px; font-size:14px; font-family:'JetBrains Mono',monospace; }
+  .console-area { background:rgba(7,11,20,0.6); border-top:1px solid var(--border); height:120px; overflow-y:auto; padding:8px 14px; font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .console-line { padding:1px 0; }
+  .console-line.info    { color:var(--cyan); }
+  .console-line.success { color:var(--success); }
+  .console-line.error   { color:var(--danger); }
+  .console-line.warn    { color:var(--warning); }
+
+  /* SETTINGS */
+  .settings-layout { display:grid; grid-template-columns:220px 1fr; gap:20px; }
+  .settings-nav { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:8px; height:fit-content; }
+  .settings-nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:9px; font-size:14px; cursor:pointer; transition:all 0.15s; color:var(--muted); border:1px solid transparent; }
+  .settings-nav-item:hover { background:rgba(255,255,255,0.04); color:var(--text); }
+  .settings-nav-item.active { background:rgba(0,247,255,0.08); color:var(--cyan); border-color:var(--border); }
+  .settings-panel { display:none; }
+  .settings-panel.active { display:block; }
+  .settings-section { background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:16px; }
+  .settings-section h3 { font-size:15px; font-weight:600; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .setting-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+  .setting-row:last-child { border-bottom:none; }
+  .setting-info h4 { font-size:14px; font-weight:500; margin-bottom:2px; }
+  .setting-info p  { font-size:12px; color:var(--muted); }
+  .toggle { width:44px; height:24px; background:rgba(255,255,255,0.1); border-radius:12px; position:relative; cursor:pointer; transition:background 0.2s; border:1px solid var(--border); flex-shrink:0; }
+  .toggle.on { background:rgba(0,255,157,0.3); border-color:var(--neon); }
+  .toggle::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform 0.2s; }
+  .toggle.on::after { transform:translateX(20px); background:var(--neon); }
+
+  /* DB VIEWER */
+  .db-table { width:100%; border-collapse:collapse; font-size:13px; font-family:'JetBrains Mono',monospace; }
+  .db-table th { background:rgba(0,247,255,0.06); border:1px solid var(--border); padding:8px 12px; text-align:left; font-size:11px; font-weight:600; color:var(--cyan); letter-spacing:0.5px; }
+  .db-table td { border:1px solid var(--border); padding:7px 12px; color:var(--muted); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .db-table tr:hover td { background:rgba(0,247,255,0.03); }
+
+  /* UTILS */
+  .flex { display:flex; } .items-center { align-items:center; } .justify-between { justify-content:space-between; }
+  .gap-8 { gap:8px; } .gap-12 { gap:12px; } .mt-16 { margin-top:16px; } .mb-16 { margin-bottom:16px; }
+  .text-muted { color:var(--muted); } .text-sm { font-size:13px; } .font-mono { font-family:'JetBrains Mono',monospace; }
+  @keyframes pulse-neon { 0%,100%{box-shadow:0 0 8px rgba(0,255,157,0.3)} 50%{box-shadow:0 0 20px rgba(0,255,157,0.7)} }
+  .pulse { animation:pulse-neon 2s infinite; }
+  @media (max-width:768px) {
+    .chat-layout { grid-template-columns:1fr; height:auto; }
+    .editor-layout { grid-template-columns:1fr; height:auto; }
+    .settings-layout { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">&lt;/&gt;</div>
+      <h1>CodeCollab</h1>
+      <p>Collaborative dev platform</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login"  onclick="switchAuthTab('login')">Login</button>
+      <button class="auth-tab"        id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    <!-- LOGIN -->
+    <div class="auth-panel active" id="panel-login">
+      <div class="auth-error" id="login-error"></div>
+      <div class="form-group">
+        <label>Username</label>
+        <div class="input-icon-wrap">
+          <span class="input-prefix">@</span>
+          <input class="input" id="login-username" placeholder="your_username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input class="input" id="login-password" type="password" placeholder="........" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+          <button class="password-toggle" onclick="togglePw('login-password',this)">[show]</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="doLogin()">[>>] Login</button>
+      <div class="auth-footer">No account? <span style="color:var(--cyan);cursor:pointer" onclick="switchAuthTab('signup')">Sign up</span></div>
+    </div>
+    <!-- SIGN UP -->
+    <div class="auth-panel" id="panel-signup">
+      <div class="auth-error" id="signup-error"></div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input class="input" id="signup-name" placeholder="John Doe" onkeydown="if(event.key==='Enter')doSignup()">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <div class="input-icon-wrap">
+          <span class="input-prefix">@</span>
+          <input class="input" id="signup-username" placeholder="your_username" autocomplete="username" oninput="checkUsernameAvail(this.value)" onkeydown="if(event.key==='Enter')doSignup()">
+        </div>
+        <div id="username-check" style="font-size:11px;margin-top:4px;font-family:monospace"></div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="password-wrap">
+          <input class="input" id="signup-password" type="password" placeholder="min. 6 characters" autocomplete="new-password" oninput="checkStrength(this.value)" onkeydown="if(event.key==='Enter')doSignup()">
+          <button class="password-toggle" onclick="togglePw('signup-password',this)">[show]</button>
+        </div>
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <div class="strength-label" id="strength-label"></div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="password-wrap">
+          <input class="input" id="signup-confirm" type="password" placeholder="repeat password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSignup()">
+          <button class="password-toggle" onclick="togglePw('signup-confirm',this)">[show]</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" onclick="doSignup()">[+] Create Account</button>
+      <div class="auth-footer">Already have an account? <span style="color:var(--cyan);cursor:pointer" onclick="switchAuthTab('login')">Login</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo" onclick="navigateTo('home')">
+    <div class="logo-icon pulse">&lt;/&gt;</div>
+    <span class="logo-text">CodeCollab</span>
+  </div>
+  <nav>
+    <button class="nav-btn active" id="nav-home"     onclick="navigateTo('home')">Home</button>
+    <button class="nav-btn"        id="nav-projects" onclick="navigateTo('projects')">Projects</button>
+    <button class="nav-btn"        id="nav-editor"   onclick="navigateTo('editor')">Editor</button>
+    <button class="nav-btn"        id="nav-chats"    onclick="navigateTo('chats')">Chat</button>
+    <button class="nav-btn"        id="nav-database" onclick="navigateTo('database')">Database</button>
+    <button class="nav-btn"        id="nav-settings" onclick="navigateTo('settings')">Settings</button>
+  </nav>
+  <div class="header-right">
+    <div id="db-status" class="loading"><span>(*) Connecting...</span></div>
+    <span id="header-username" style="font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace"></span>
+    <div class="avatar-btn" onclick="openModal('profile-modal')" title="Edit Profile">
+      <span id="header-initials">ME</span>
+      <div class="online-dot"></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()" style="font-family:'JetBrains Mono',monospace;font-size:12px">[x] Logout</button>
+  </div>
+</header>
+
+<div id="toast-container"></div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">My Profile</span><button class="modal-close" onclick="closeModal('profile-modal')">x</button></div>
+    <div class="form-group"><label>Display Name</label><input class="input" id="profile-name" placeholder="Your name"></div>
+    <div class="form-group"><label>Username</label><input class="input" id="profile-username" placeholder="@username" disabled style="opacity:0.5" title="Username cannot be changed"></div>
+    <div class="form-group"><label>Bio</label><textarea class="textarea" id="profile-bio" placeholder="Tell your team about yourself..."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('profile-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">[save] Save Profile</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="new-project-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">New Project</span><button class="modal-close" onclick="closeModal('new-project-modal')">x</button></div>
+    <div class="form-group"><label>Project Name *</label><input class="input" id="proj-name" placeholder="My Awesome Project"></div>
+    <div class="form-group"><label>Description</label><textarea class="textarea" id="proj-desc" placeholder="What are you building?"></textarea></div>
+    <div class="form-group"><label>Language</label>
+      <select class="select" id="proj-lang">
+        <option value="html">HTML / CSS / JS</option><option value="js">JavaScript</option>
+        <option value="python">Python</option><option value="rust">Rust</option>
+        <option value="go">Go</option><option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Visibility</label>
+      <select class="select" id="proj-visibility">
+        <option value="private">[*] Private</option>
+        <option value="team">[T] Team</option>
+        <option value="public">[W] Public</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-project-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">[+] Create Project</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="new-channel-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">New Channel</span><button class="modal-close" onclick="closeModal('new-channel-modal')">x</button></div>
+    <div class="form-group"><label>Channel Name *</label><input class="input" id="channel-name" placeholder="e.g. design-team"></div>
+    <div class="form-group"><label>Type</label>
+      <select class="select" id="channel-type">
+        <option value="public">[W] Public</option>
+        <option value="private">[*] Private</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-channel-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createChannel()">[+] Create Channel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="invite-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-title">[+] Invite to Channel</span><button class="modal-close" onclick="closeModal('invite-modal')">x</button></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+      Invite a user to <span id="invite-channel-name" style="color:var(--neon);font-family:monospace">#general</span>
+    </p>
+    <div class="form-group" style="position:relative">
+      <label>Username</label>
+      <div class="input-icon-wrap">
+        <span class="input-prefix">@</span>
+        <input class="input" id="invite-username" placeholder="username" autocomplete="off"
+          oninput="searchUsersForInvite(this.value)"
+          onkeydown="if(event.key==='Enter')doInviteUser()">
+      </div>
+      <div id="invite-suggestions" style="position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px;"></div>
+    </div>
+    <div id="invite-result" style="font-size:13px;margin-bottom:8px;font-family:monospace"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('invite-modal')">Close</button>
+      <button class="btn btn-primary" onclick="doInviteUser()">[+] Add to Channel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><span class="modal-title">/!\ Confirm Delete</span><button class="modal-close" onclick="closeModal('confirm-modal')">x</button></div>
+    <p style="color:var(--muted);font-size:14px" id="confirm-msg">Are you sure?</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-action-btn">[x] Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="save-editor-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><span class="modal-title">Save Snippet</span><button class="modal-close" onclick="closeModal('save-editor-modal')">x</button></div>
+    <div class="form-group"><label>Snippet Name *</label><input class="input" id="snippet-name" placeholder="My cool snippet"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('save-editor-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSnippet()">[save] Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== PAGES ======== -->
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="main-wrap">
+    <section class="hero">
+      <div class="hero-tag">[ * ] REAL-TIME COLLABORATION</div>
+      <h1>Code together,<br><span>ship faster.</span></h1>
+      <p>Collaborative coding platform -- live chat, real-time editor, live preview, and a real SQLite database.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-lg" onclick="openModal('new-project-modal')">[+] New Project</button>
+        <button class="btn btn-outline btn-lg" onclick="navigateTo('editor')">[>] Open Editor</button>
+        <button class="btn btn-ghost btn-lg"   onclick="navigateTo('chats')">[#] Team Chat</button>
+      </div>
+    </section>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value" id="stat-projects">0</div><div class="stat-label">Projects</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Messages</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-snippets">0</div><div class="stat-label">Snippets</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-channels">0</div><div class="stat-label">Channels</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-users">0</div><div class="stat-label">Users</div></div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon neon">[#]</div><h3>Real-time Chat</h3><p>Live messages via Server-Sent Events. Invite users by @username to private channels.</p></div>
+      <div class="feature-card"><div class="feature-icon cyan">[>]</div><h3>Code Editor</h3><p>Multi-language editor with live preview, snippets saved to SQLite.</p></div>
+      <div class="feature-card"><div class="feature-icon purple">[db]</div><h3>SQLite Database</h3><p>Real .db file on disk. All users, messages, projects and snippets persisted server-side.</p></div>
+      <div class="feature-card"><div class="feature-icon pink">[P]</div><h3>Projects</h3><p>Create and manage projects with visibility controls, stored in the database.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECTS -->
+<div class="page" id="page-projects">
+  <div class="main-wrap">
+    <div class="page-header">
+      <div><h2>Projects</h2><p class="text-sm text-muted mt-16">Manage your coding projects</p></div>
+      <div class="flex gap-8">
+        <input class="input" id="search-projects" placeholder="/  Search projects..." style="width:220px" oninput="renderProjects()">
+        <button class="btn btn-primary" onclick="openModal('new-project-modal')">[+] New Project</button>
+      </div>
+    </div>
+    <div class="projects-grid" id="projects-grid"></div>
+  </div>
+</div>
+
+<!-- EDITOR -->
+<div class="page" id="page-editor">
+  <div style="padding:16px 24px">
+    <div class="flex justify-between items-center mb-16">
+      <div class="flex items-center gap-12">
+        <h2 style="font-size:18px;font-weight:700">Code Editor</h2>
+        <select class="select" id="snippet-select" style="width:200px;font-size:13px" onchange="loadSnippet(this.value)">
+          <option value="">-- Load snippet --</option>
+        </select>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost btn-sm"   onclick="clearEditor()">[clr] Clear</button>
+        <button class="btn btn-ghost btn-sm"   onclick="copyEditorCode()">[cp] Copy</button>
+        <button class="btn btn-outline btn-sm" onclick="openModal('save-editor-modal')">[save] Save Snippet</button>
+        <button class="btn btn-primary btn-sm" onclick="runPreview()">[run] Run</button>
+      </div>
+    </div>
+    <div class="editor-layout">
+      <div class="editor-panel">
+        <div class="editor-toolbar">
+          <div class="mac-dots"><div class="mac-dot red"></div><div class="mac-dot yellow"></div><div class="mac-dot green"></div></div>
+          <span id="editor-filename" class="text-sm text-muted font-mono">untitled.html</span>
+          <div class="lang-tabs" id="lang-tabs">
+            <button class="lang-tab active" onclick="switchLang('html')">HTML</button>
+            <button class="lang-tab" onclick="switchLang('css')">CSS</button>
+            <button class="lang-tab" onclick="switchLang('js')">JS</button>
+            <button class="lang-tab" onclick="switchLang('python')">PY</button>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm btn-icon" onclick="editorIndent()"     title="Indent">[->]</button>
+            <button class="btn btn-ghost btn-sm btn-icon" onclick="editorFindReplace()" title="Find">[?]</button>
+          </div>
+        </div>
+        <div class="editor-area">
+          <div class="line-numbers" id="line-numbers"></div>
+          <textarea id="code-editor" spellcheck="false" oninput="onEditorInput()" onscroll="syncScroll(this)" onkeydown="handleEditorKey(event)"></textarea>
+        </div>
+        <div class="editor-status">
+          <span class="status-item"><span id="editor-lang-label">HTML</span></span>
+          <span class="status-item" id="editor-cursor-pos">Ln 1, Col 1</span>
+          <span class="status-item" id="editor-char-count">0 chars</span>
+          <span class="status-item" style="margin-left:auto;color:var(--success)">[auto-saved]</span>
+        </div>
+      </div>
+      <div class="editor-panel">
+        <div class="editor-toolbar">
+          <div class="mac-dots"><div class="mac-dot red"></div><div class="mac-dot yellow"></div><div class="mac-dot green"></div></div>
+          <span class="text-sm text-muted">Live Preview</span>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="clearConsole()">[clr] Console</button>
+            <button class="btn btn-primary btn-sm" onclick="runPreview()">[run] Run</button>
+          </div>
+        </div>
+        <div id="preview-wrap" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+          <div id="preview-placeholder" class="preview-placeholder">
+            <span style="font-size:32px;opacity:0.3">[>]</span>
+            <p>Click [run] to see preview</p>
+          </div>
+          <iframe id="preview-frame" style="display:none;flex:1;border:none;margin:10px;border-radius:8px"></iframe>
+        </div>
+        <div class="console-area" id="console-output">
+          <div class="console-line info">[INFO] Editor ready. Write code and hit [run].</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="page" id="page-chats">
+  <div style="padding:16px 24px">
+    <div class="page-header">
+      <h2>Team Chat</h2>
+      <button class="btn btn-primary btn-sm" onclick="openModal('new-channel-modal')">[+] New Channel</button>
+    </div>
+    <div class="chat-layout">
+      <div class="chat-sidebar">
+        <div class="chat-sidebar-header">
+          <h3>Channels</h3>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('new-channel-modal')">[+]</button>
+        </div>
+        <div class="channel-list" id="channel-list"></div>
+      </div>
+      <div class="chat-main">
+        <div class="chat-header">
+          <div class="channel-dot online"></div>
+          <div>
+            <h3 id="active-channel-name"># general</h3>
+            <div class="sub" id="active-channel-sub">Loading...</div>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <button class="btn btn-outline btn-sm" onclick="openModal('invite-modal')">[+] Invite</button>
+            <button class="btn btn-ghost btn-sm"   onclick="toggleMembersPanel()">[members]</button>
+            <button class="btn btn-danger btn-sm"  onclick="deleteActiveChannel()">[x] Delete</button>
+          </div>
+        </div>
+        <div class="messages-area" id="messages-area"></div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <textarea id="msg-input" rows="1" placeholder="Message #general..." onkeydown="handleMsgKey(event)" oninput="autoResize(this)"></textarea>
+            <div class="chat-input-tools">
+              <button class="tool-btn" onclick="insertCodeBlock()">[code]</button>
+              <button class="tool-btn" onclick="insertQuickText('[+1]')">[+1]</button>
+              <button class="tool-btn" onclick="insertQuickText('[ok]')">[ok]</button>
+              <button class="tool-btn" onclick="insertQuickText('[?]')">[?]</button>
+              <button class="tool-btn" onclick="insertQuickText('[!!]')">[!!]</button>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-icon" onclick="sendMessage()">[>>]</button>
+        </div>
+      </div>
+      <div class="members-panel" id="members-panel">
+        <div class="members-panel-header">
+          <span>Members</span>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="toggleMembersPanel()">[x]</button>
+        </div>
+        <div style="padding:8px">
+          <input class="input" id="member-search" placeholder="Search..." style="font-size:12px;padding:7px 10px" oninput="filterMemberSearch(this.value)">
+        </div>
+        <div id="members-list" style="padding:0 8px 8px;overflow-y:auto;flex:1"></div>
+        <div class="members-panel-footer">
+          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center" onclick="openModal('invite-modal')">[+] Add Member</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DATABASE VIEWER -->
+<div class="page" id="page-database">
+  <div class="main-wrap">
+    <div class="page-header">
+      <div><h2>Database Viewer</h2><p class="text-sm text-muted">SQLite -- codecollab.db</p></div>
+      <div class="flex gap-8">
+        <button class="btn btn-ghost"   onclick="exportDB()">[dl] Export JSON</button>
+        <button class="btn btn-danger"  onclick="confirmClearDB()">[x] Clear All Data</button>
+      </div>
+    </div>
+    <div id="db-overview" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px"></div>
+    <div id="db-tables-section"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="main-wrap">
+    <div class="page-header"><h2>Settings</h2></div>
+    <div class="settings-layout">
+      <div class="settings-nav">
+        <div class="settings-nav-item active" onclick="switchSettings('profile',this)">Profile</div>
+        <div class="settings-nav-item" onclick="switchSettings('editor',this)">Editor</div>
+        <div class="settings-nav-item" onclick="switchSettings('advanced',this)">Advanced</div>
+      </div>
+      <div>
+        <div class="settings-panel active" id="settings-profile">
+          <div class="settings-section">
+            <h3>Profile Information</h3>
+            <div class="form-group"><label>Display Name</label><input class="input" id="s-name" placeholder="Your name"></div>
+            <div class="form-group"><label>Username (read-only)</label><input class="input" id="s-username" placeholder="@username" disabled style="opacity:0.5"></div>
+            <div class="form-group"><label>Bio</label><textarea class="textarea" id="s-bio" placeholder="Tell your team about yourself..."></textarea></div>
+            <button class="btn btn-primary" onclick="saveProfileSettings()">[save] Save Changes</button>
+          </div>
+        </div>
+        <div class="settings-panel" id="settings-editor">
+          <div class="settings-section">
+            <h3>Editor Preferences</h3>
+            <div class="setting-row">
+              <div class="setting-info"><h4>Tab Size</h4><p>Spaces per tab</p></div>
+              <select class="select" id="tab-size-select" style="width:80px" onchange="saveEditorSettings()">
+                <option value="2">2</option><option value="4">4</option><option value="8">8</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info"><h4>Line Numbers</h4><p>Show line numbers</p></div>
+              <div class="toggle on" id="toggle-linenums" onclick="toggleSetting('linenums',this)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-panel" id="settings-advanced">
+          <div class="settings-section">
+            <h3>Advanced</h3>
+            <div class="setting-row">
+              <div class="setting-info"><h4>Database File</h4><p id="db-file-path">codecollab.db</p></div>
+              <span class="badge badge-neon">SQLite</span>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info"><h4>Export Data</h4><p>Download all data as JSON</p></div>
+              <button class="btn btn-ghost btn-sm" onclick="exportDB()">[dl] Export</button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-info"><h4>Clear Database</h4><p>Delete all data permanently</p></div>
+              <button class="btn btn-danger btn-sm" onclick="confirmClearDB()">[x] Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======== JAVASCRIPT ======== -->
+<script>
+"use strict";
+
+const API = ''; // same origin -- server serves this file from /public
+
+// ── STATE ──────────────────────────────────────────────────
+let currentUser  = null;
+let currentPage  = 'home';
+let activeChannel = null;
+let currentLang  = 'html';
+let editorContents = { html:'', css:'', js:'', python:'' };
+let settings = { linenums:true, tabSize:2 };
+let sseSource = null;
+
+const COLORS = [
+  'linear-gradient(135deg,#00ff9d,#00f7ff)',
+  'linear-gradient(135deg,#a855f7,#ec4899)',
+  'linear-gradient(135deg,#f59e0b,#ef4444)',
+  'linear-gradient(135deg,#3b82f6,#06b6d4)',
+  'linear-gradient(135deg,#10b981,#6366f1)',
+];
+const LANG_COLORS = { html:'#e34c26', css:'#264de4', js:'#f0db4f', python:'#3776ab', rust:'#dea584', go:'#00acd7', other:'#888' };
+
+// ── API HELPER ─────────────────────────────────────────────
+async function api(method, path, body) {
+  try {
+    const opts = { method, headers: { 'Content-Type':'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch(e) {
+    return { ok:false, error: 'Cannot reach server. Is it running?' };
+  }
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const icons = { success:'[ok]', error:'[!]', info:'[i]' };
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]||'[i]'}</span><span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.animation='slideOut 0.3s ease forwards'; setTimeout(()=>t.remove(),300); }, 3000);
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o =>
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); })
+);
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function navigateTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  document.getElementById(`nav-${page}`)?.classList.add('active');
+  currentPage = page;
+  if (page === 'chats')    { renderChannels(); connectSSE(); }
+  else                     { disconnectSSE(); }
+  if (page === 'projects') renderProjects();
+  if (page === 'database') renderDBViewer();
+  if (page === 'settings') loadSettingsUI();
+  if (page === 'editor')   loadSnippetList();
+}
+
+// ── AUTH ───────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  clearAuthErrors();
+}
+function clearAuthErrors() {
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('signup-error').classList.remove('show');
+}
+function showAuthError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = '[!] ' + msg;
+  el.classList.add('show');
+}
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '[show]' : '[hide]';
+}
+function checkStrength(pw) {
+  let s = 0;
+  if(pw.length>=6) s++; if(pw.length>=10) s++;
+  if(/[A-Z]/.test(pw)) s++; if(/[0-9]/.test(pw)) s++; if(/[^a-zA-Z0-9]/.test(pw)) s++;
+  const lvs = [
+    {w:'0%',c:'var(--danger)',l:''},
+    {w:'20%',c:'var(--danger)',l:'[weak]'},
+    {w:'40%',c:'var(--warning)',l:'[fair]'},
+    {w:'60%',c:'var(--warning)',l:'[good]'},
+    {w:'80%',c:'var(--success)',l:'[strong]'},
+    {w:'100%',c:'var(--neon)',l:'[very strong]'},
+  ];
+  const lv = lvs[s]||lvs[0];
+  document.getElementById('strength-fill').style.cssText = `width:${lv.w};background:${lv.c}`;
+  const sl = document.getElementById('strength-label');
+  sl.textContent = lv.l; sl.style.color = lv.c;
+}
+let unameTimer;
+function checkUsernameAvail(val) {
+  clearTimeout(unameTimer);
+  const el = document.getElementById('username-check');
+  val = val.trim().toLowerCase();
+  if (!val) { el.textContent=''; return; }
+  if (!/^[a-z0-9_]{3,20}$/.test(val)) {
+    el.textContent='[!] 3-20 chars, letters/numbers/underscore'; el.style.color='var(--danger)'; return;
+  }
+  unameTimer = setTimeout(async () => {
+    const r = await api('GET', `/api/users/${val}`);
+    if (r.ok) { el.textContent='[!] Username taken'; el.style.color='var(--danger)'; }
+    else       { el.textContent='[ok] Available';    el.style.color='var(--success)'; }
+  }, 400);
+}
+
+async function doSignup() {
+  clearAuthErrors();
+  const name     = document.getElementById('signup-name').value.trim();
+  const username = document.getElementById('signup-username').value.trim().toLowerCase();
+  const password = document.getElementById('signup-password').value;
+  const confirm  = document.getElementById('signup-confirm').value;
+  if (!name)                           return showAuthError('signup-error','Display name is required.');
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) return showAuthError('signup-error','Username: 3-20 chars, letters/numbers/underscore.');
+  if (password.length < 6)             return showAuthError('signup-error','Password must be at least 6 characters.');
+  if (password !== confirm)            return showAuthError('signup-error','Passwords do not match.');
+  const r = await api('POST','/api/signup',{username,name,password});
+  if (!r.ok) return showAuthError('signup-error', r.error);
+  loginUser(r.user);
+}
+
+async function doLogin() {
+  clearAuthErrors();
+  const username = document.getElementById('login-username').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+  if (!username) return showAuthError('login-error','Username is required.');
+  if (!password) return showAuthError('login-error','Password is required.');
+  const r = await api('POST','/api/login',{username,password});
+  if (!r.ok) return showAuthError('login-error', r.error);
+  loginUser(r.user);
+}
+
+function loginUser(user) {
+  currentUser = user;
+  localStorage.setItem('cc_session', JSON.stringify({ username: user.username }));
+  updateHeaderUser();
+  document.getElementById('auth-screen').classList.add('hidden');
+  toast('Welcome, ' + user.name + '!', 'success');
+  setDbStatus('ready');
+  refreshAll();
+}
+
+function doLogout() {
+  localStorage.removeItem('cc_session');
+  currentUser = null;
+  disconnectSSE();
+  document.getElementById('auth-screen').classList.remove('hidden');
+  switchAuthTab('login');
+  ['login-username','login-password','signup-name','signup-username','signup-password','signup-confirm']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  clearAuthErrors();
+  toast('Logged out.','info');
+}
+
+async function checkSession() {
+  const saved = localStorage.getItem('cc_session');
+  if (!saved) return false;
+  try {
+    const { username } = JSON.parse(saved);
+    const r = await api('GET', `/api/users/${username}`);
+    if (r.ok) { loginUser(r.user); return true; }
+  } catch {}
+  localStorage.removeItem('cc_session');
+  return false;
+}
+
+function updateHeaderUser() {
+  if (!currentUser) return;
+  const name = currentUser.name || currentUser.username || 'Me';
+  document.getElementById('header-initials').textContent  = name.substring(0,2).toUpperCase();
+  document.getElementById('header-username').textContent  = '@' + (currentUser.username||'me');
+}
+
+function setDbStatus(s) {
+  const el = document.getElementById('db-status');
+  el.className = s;
+  const lbl = { loading:'(*) Connecting...', ready:'(*) DB Ready', error:'(*) DB Error' };
+  el.innerHTML = `<span>${lbl[s]||s}</span>`;
+}
+
+// ── PROFILE ────────────────────────────────────────────────
+function loadProfileFields() {
+  if (!currentUser) return;
+  ['name','username','bio'].forEach(k => {
+    const el = document.getElementById('profile-'+k);
+    if (el) el.value = currentUser[k]||'';
+  });
+  ['s-name','s-username','s-bio'].forEach((id,i) => {
+    const k = ['name','username','bio'][i];
+    const el = document.getElementById(id);
+    if (el) el.value = currentUser[k]||'';
+  });
+}
+async function saveProfile() {
+  const name = document.getElementById('profile-name').value.trim();
+  const bio  = document.getElementById('profile-bio').value.trim();
+  const r = await api('PUT', `/api/users/${currentUser.username}`, { name, bio });
+  if (!r.ok) { toast(r.error,'error'); return; }
+  currentUser = r.user;
+  updateHeaderUser();
+  closeModal('profile-modal');
+  toast('Profile saved!','success');
+}
+async function saveProfileSettings() {
+  const name = document.getElementById('s-name').value.trim();
+  const bio  = document.getElementById('s-bio').value.trim();
+  const r = await api('PUT', `/api/users/${currentUser.username}`, { name, bio });
+  if (!r.ok) { toast(r.error,'error'); return; }
+  currentUser = r.user;
+  updateHeaderUser();
+  loadProfileFields();
+  toast('Profile updated!','success');
+}
+
+// ── SETTINGS ───────────────────────────────────────────────
+function loadSettingsUI() {
+  loadProfileFields();
+  document.getElementById('tab-size-select').value = settings.tabSize || 2;
+  document.getElementById('toggle-linenums').classList.toggle('on', !!settings.linenums);
+}
+function switchSettings(tab, el) {
+  document.querySelectorAll('.settings-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.settings-nav-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('settings-'+tab).classList.add('active');
+  el.classList.add('active');
+}
+function toggleSetting(key, el) {
+  el.classList.toggle('on');
+  settings[key] = el.classList.contains('on');
+  applySettings();
+}
+function saveEditorSettings() {
+  settings.tabSize = parseInt(document.getElementById('tab-size-select').value)||2;
+  applySettings();
+  toast('Editor settings saved','success');
+}
+function applySettings() {
+  const ce = document.getElementById('code-editor');
+  if (ce) ce.style.tabSize = settings.tabSize||2;
+  const ln = document.getElementById('line-numbers');
+  if (ln) ln.style.display = settings.linenums ? 'block' : 'none';
+}
+
+// ── STATS ──────────────────────────────────────────────────
+async function updateStats() {
+  const r = await api('GET', `/api/stats?username=${currentUser?.username||''}`);
+  if (!r.ok) return;
+  const s = r.stats;
+  ['projects','messages','snippets','channels','users'].forEach(k => {
+    const el = document.getElementById('stat-'+k);
+    if (el) el.textContent = s[k] ?? 0;
+  });
+}
+
+async function refreshAll() {
+  await updateStats();
+  await renderChannels();
+  await renderProjects();
+  await loadSnippetList();
+  loadProfileFields();
+}
+
+// ── CHANNELS ───────────────────────────────────────────────
+async function renderChannels() {
+  const r = await api('GET', `/api/channels?username=${currentUser?.username||''}`);
+  if (!r.ok) return;
+  const channels = r.channels;
+  const list = document.getElementById('channel-list');
+  if (!channels.length) {
+    list.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--muted)">No channels yet</div>';
+    return;
+  }
+  if (!activeChannel && channels.length) activeChannel = channels[0].id;
+  list.innerHTML = channels.map(ch => `
+    <div class="channel-item ${ch.id == activeChannel ? 'active' : ''}" onclick="switchChannel(${ch.id})">
+      <span class="channel-dot ${ch.id == activeChannel ? 'online' : ''}"></span>
+      <span style="flex:1">#${esc(ch.name)}</span>
+      <span style="font-size:10px;color:var(--muted);font-family:monospace">${ch.member_count||0}</span>
+    </div>`).join('');
+  const active = channels.find(c => c.id == activeChannel);
+  if (active) {
+    document.getElementById('active-channel-name').textContent = '#'+active.name;
+    document.getElementById('active-channel-sub').textContent  = active.type + ' -- ' + (active.member_count||0) + ' members';
+    document.getElementById('msg-input').placeholder = `Message #${active.name}...`;
+    document.getElementById('invite-channel-name').textContent = '#'+active.name;
+  }
+  renderMembers();
+}
+
+async function renderMembers() {
+  const listEl = document.getElementById('members-list');
+  if (!activeChannel) { listEl.innerHTML=''; return; }
+  const r = await api('GET', `/api/channels/${activeChannel}/members`);
+  if (!r.ok) return;
+  const members = r.members;
+  const me = currentUser?.username;
+  const online  = members.filter(u => u.username === me);
+  const offline = members.filter(u => u.username !== me);
+  let html = '';
+  if (online.length) {
+    html += `<div class="members-section-label">-- online --</div>`;
+    html += online.map(u => memberRowHTML(u, me)).join('');
+  }
+  if (offline.length) {
+    html += `<div class="members-section-label">-- members --</div>`;
+    html += offline.map(u => memberRowHTML(u, me)).join('');
+  }
+  listEl.innerHTML = html || '<div style="padding:12px;font-size:12px;color:var(--muted)">No members.</div>';
+}
+function memberRowHTML(u, me) {
+  const isMe = u.username === me;
+  return `
+  <div class="member-row">
+    <div class="member-avatar" style="background:${u.color||COLORS[0]}">${u.name.substring(0,2).toUpperCase()}</div>
+    <div class="member-info">
+      <div class="member-name">${esc(u.name)}${isMe?' <span style="color:var(--cyan);font-size:10px">[you]</span>':''}</div>
+      <div class="member-uname">@${esc(u.username)}</div>
+    </div>
+    ${!isMe ? `<button class="member-kick" onclick="kickMember('${esc(u.username)}')">[x]</button>` : ''}
+  </div>`;
+}
+function filterMemberSearch(val) {
+  document.querySelectorAll('#members-list .member-row').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(val.toLowerCase()) ? '' : 'none';
+  });
+}
+function toggleMembersPanel() {
+  document.querySelector('.chat-layout').classList.toggle('members-open');
+}
+
+async function switchChannel(id) {
+  activeChannel = id;
+  await renderChannels();
+  await renderMessages();
+  connectSSE();
+}
+async function createChannel() {
+  const name = document.getElementById('channel-name').value.trim().replace(/\s+/g,'-').toLowerCase();
+  if (!name) { toast('Channel name required','error'); return; }
+  const r = await api('POST','/api/channels',{name, type:document.getElementById('channel-type').value, username:currentUser.username});
+  if (!r.ok) { toast(r.error,'error'); return; }
+  activeChannel = r.channel.id;
+  document.getElementById('channel-name').value='';
+  closeModal('new-channel-modal');
+  toast(`#${name} created!`,'success');
+  await renderChannels();
+  await renderMessages();
+  updateStats();
+  connectSSE();
+}
+async function deleteActiveChannel() {
+  if (!activeChannel) return;
+  document.getElementById('confirm-msg').textContent = 'Delete this channel and all its messages?';
+  document.getElementById('confirm-action-btn').onclick = async () => {
+    await api('DELETE', `/api/channels/${activeChannel}`);
+    closeModal('confirm-modal');
+    activeChannel = null;
+    toast('Channel deleted','info');
+    await renderChannels();
+    await renderMessages();
+    updateStats();
+  };
+  openModal('confirm-modal');
+}
+
+// ── INVITE / KICK ──────────────────────────────────────────
+let inviteSearchTimer;
+async function searchUsersForInvite(val) {
+  clearTimeout(inviteSearchTimer);
+  const box = document.getElementById('invite-suggestions');
+  val = val.trim();
+  if (!val) { box.style.display='none'; return; }
+  inviteSearchTimer = setTimeout(async () => {
+    const r = await api('GET', `/api/users/search?q=${encodeURIComponent(val)}`);
+    if (!r.ok || !r.users.length) { box.style.display='none'; return; }
+    // get current members to mark
+    const mr = await api('GET', `/api/channels/${activeChannel}/members`);
+    const memberNames = (mr.ok ? mr.members : []).map(u => u.username);
+    box.style.display = 'block';
+    box.innerHTML = r.users.map(u => {
+      const already = memberNames.includes(u.username) || u.username === currentUser.username;
+      return `<div class="invite-suggestion ${already?'already-member':''}" onclick="selectInviteSuggestion('${esc(u.username)}')">
+        <div class="member-avatar" style="background:${u.color||COLORS[0]};width:28px;height:28px;font-size:11px">${u.name.substring(0,2).toUpperCase()}</div>
+        <div>
+          <div style="font-weight:600">${esc(u.name)}</div>
+          <div style="font-size:12px;color:var(--muted);font-family:monospace">@${esc(u.username)}${already?' -- already a member':''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }, 300);
+}
+function selectInviteSuggestion(username) {
+  document.getElementById('invite-username').value = username;
+  document.getElementById('invite-suggestions').style.display = 'none';
+  document.getElementById('invite-result').textContent = '';
+}
+async function doInviteUser() {
+  const raw = document.getElementById('invite-username').value.trim().replace(/^@/,'').toLowerCase();
+  const resultEl = document.getElementById('invite-result');
+  if (!raw) { resultEl.style.color='var(--danger)'; resultEl.textContent='[!] Enter a username.'; return; }
+  if (!activeChannel) { resultEl.style.color='var(--danger)'; resultEl.textContent='[!] No channel selected.'; return; }
+  const r = await api('POST', `/api/channels/${activeChannel}/members`, {
+    username: raw, inviter_username: currentUser.username
+  });
+  if (!r.ok) {
+    resultEl.style.color='var(--danger)';
+    resultEl.textContent='[!] ' + r.error;
+    return;
+  }
+  resultEl.style.color='var(--success)';
+  resultEl.textContent=`[ok] @${raw} (${r.user.name}) added!`;
+  document.getElementById('invite-username').value='';
+  document.getElementById('invite-suggestions').style.display='none';
+  toast(`@${raw} added to channel`,'success');
+  await renderChannels();
+  await renderMessages();
+}
+async function kickMember(username) {
+  if (!activeChannel) return;
+  const r = await api('DELETE', `/api/channels/${activeChannel}/members/${username}`, {
+    kicker_username: currentUser.username
+  });
+  if (!r.ok) { toast(r.error,'error'); return; }
+  toast(`@${username} removed`,'info');
+  await renderChannels();
+  await renderMessages();
+}
+
+// ── MESSAGES ───────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text  = input.value.replace(/[^\x00-\x7F]/g,'').trim();
+  if (!text || !activeChannel) return;
+  input.value=''; input.style.height='';
+  const r = await api('POST', `/api/channels/${activeChannel}/messages`, {
+    text, username: currentUser.username, name: currentUser.name
+  });
+  if (!r.ok) { toast(r.error,'error'); return; }
+  await renderMessages();
+  updateStats();
+}
+
+async function renderMessages() {
+  const area = document.getElementById('messages-area');
+  if (!activeChannel) {
+    area.innerHTML='<div class="empty-state"><p>Select a channel to start chatting</p></div>';
+    return;
+  }
+  const wasAtBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 60;
+  const r = await api('GET', `/api/channels/${activeChannel}/messages`);
+  if (!r.ok) return;
+  const msgs = r.messages;
+  if (!msgs.length) {
+    area.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">No messages yet. Say hi!</div>';
+    return;
+  }
+  area.innerHTML = msgs.map(m => {
+    if (m.is_system) return `<div style="text-align:center;padding:6px 0;font-size:12px;color:var(--muted);font-family:monospace">-- ${esc(m.text)} --</div>`;
+    const isOwn   = m.username === currentUser?.username;
+    const color   = m.user_color || COLORS[m.author.charCodeAt(0) % COLORS.length];
+    const initials = m.author.substring(0,2).toUpperCase();
+    const time    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const isCode  = m.text.startsWith('```');
+    const content = isCode
+      ? `<div class="msg-code">${esc(m.text.replace(/^```[a-z]*\n?/,'').replace(/```$/,''))}</div>`
+      : `<p>${esc(m.text)}</p>`;
+    return `<div class="msg ${isOwn?'own':''}">
+      <div class="msg-avatar" style="background:${color};color:#000">${initials}</div>
+      <div class="msg-body">
+        <div class="msg-meta">
+          <span class="msg-name">${esc(m.author)}</span>
+          <span class="msg-time">${time}</span>
+        </div>
+        <div class="msg-bubble">${content}</div>
+      </div>
+    </div>`;
+  }).join('');
+  if (wasAtBottom) area.scrollTop = area.scrollHeight;
+}
+
+function handleMsgKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} }
+function autoResize(el) { el.style.height=''; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+function insertCodeBlock() { const i=document.getElementById('msg-input'); i.value+='```\n\n```'; i.focus(); }
+function insertQuickText(t) { const i=document.getElementById('msg-input'); i.value+=t; i.focus(); }
+
+// ── SSE LIVE CHAT ──────────────────────────────────────────
+function connectSSE() {
+  disconnectSSE();
+  if (!activeChannel) return;
+  sseSource = new EventSource(`/api/channels/${activeChannel}/live`);
+  sseSource.onmessage = async (e) => {
+    await renderMessages();
+    await renderChannels();
+  };
+  sseSource.onerror = () => { disconnectSSE(); };
+}
+function disconnectSSE() {
+  if (sseSource) { sseSource.close(); sseSource=null; }
+}
+
+// ── PROJECTS ───────────────────────────────────────────────
+async function renderProjects() {
+  const grid = document.getElementById('projects-grid');
+  const q    = (document.getElementById('search-projects')?.value||'').toLowerCase();
+  const r    = await api('GET', `/api/projects?username=${currentUser?.username||''}`);
+  if (!r.ok) { grid.innerHTML='<div class="empty-state"><p>Could not load projects.</p></div>'; return; }
+  let projects = r.projects;
+  if (q) projects = projects.filter(p => p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q));
+  if (!projects.length) {
+    grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><p>No projects yet.</p><button class="btn btn-primary" onclick="openModal('new-project-modal')">[+] New Project</button></div>`;
+    return;
+  }
+  const visLabel = {private:'[*]',team:'[T]',public:'[W]'};
+  grid.innerHTML = projects.map(p => {
+    const lc  = LANG_COLORS[p.language]||'#888';
+    const date = new Date(p.created_at).toLocaleDateString();
+    return `<div class="project-card">
+      <div class="project-name">${esc(p.name)}</div>
+      <div style="margin-top:4px;margin-bottom:10px">
+        <span class="badge badge-cyan"><span class="project-lang-dot" style="background:${lc}"></span>${(p.language||'?').toUpperCase()}</span>
+        <span class="badge badge-purple" style="margin-left:4px">${visLabel[p.visibility]||'[W]'} ${esc(p.visibility)}</span>
+      </div>
+      <div class="project-desc">${esc(p.description||'No description.')}</div>
+      <div class="project-meta">
+        <span>@${esc(p.owner_username||'unknown')}</span>
+        <span>${date}</span>
+      </div>
+      <div class="project-actions">
+        <button class="btn btn-outline btn-sm" onclick="navigateTo('editor')">[>] Open</button>
+        <button class="btn btn-ghost btn-sm"   onclick="starProject(${p.id})">[*] ${p.stars||0}</button>
+        <button class="btn btn-danger btn-sm"  onclick="deleteProject(${p.id},'${esc(p.name)}')">[x]</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function createProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) { toast('Project name required','error'); return; }
+  const r = await api('POST','/api/projects',{
+    name,
+    description: document.getElementById('proj-desc').value.trim(),
+    language:    document.getElementById('proj-lang').value,
+    visibility:  document.getElementById('proj-visibility').value,
+    username:    currentUser.username
+  });
+  if (!r.ok) { toast(r.error,'error'); return; }
+  document.getElementById('proj-name').value='';
+  document.getElementById('proj-desc').value='';
+  closeModal('new-project-modal');
+  toast(`Project "${name}" created!`,'success');
+  renderProjects(); updateStats();
+}
+async function starProject(id) {
+  await api('PUT',`/api/projects/${id}/star`);
+  renderProjects();
+}
+function deleteProject(id, name) {
+  document.getElementById('confirm-msg').textContent = `Delete project "${name}"? Cannot be undone.`;
+  document.getElementById('confirm-action-btn').onclick = async () => {
+    await api('DELETE',`/api/projects/${id}`);
+    closeModal('confirm-modal');
+    toast(`Project "${name}" deleted`,'info');
+    renderProjects(); updateStats();
+  };
+  openModal('confirm-modal');
+}
+
+// ── EDITOR ─────────────────────────────────────────────────
+function switchLang(lang) {
+  editorContents[currentLang] = document.getElementById('code-editor').value;
+  currentLang = lang;
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase()===lang));
+  const names = {html:'index.html',css:'styles.css',js:'script.js',python:'main.py'};
+  document.getElementById('editor-filename').textContent = names[lang]||lang;
+  document.getElementById('editor-lang-label').textContent = lang.toUpperCase();
+  document.getElementById('code-editor').value = editorContents[lang] || defaultCode(lang);
+  updateLineNumbers(); updateEditorStats();
+}
+function defaultCode(lang) {
+  const d = {
+    html:`<!DOCTYPE html>\n<html>\n<head>\n  <style>body{background:#0a0e17;color:#00ff9d;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:monospace}h1{font-size:3rem}</style>\n</head>\n<body>\n  <h1>Hello, CodeCollab!</h1>\n</body>\n</html>`,
+    css:`body {\n  background: #0a0e17;\n  color: #00ff9d;\n  font-family: monospace;\n}`,
+    js:`console.log("Hello from CodeCollab!");\n\nconst greet = name => "Hello, " + name + "!";\nconsole.log(greet("World"));`,
+    python:`print("Hello from CodeCollab!")\n\ndef greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("World"))`
+  };
+  return d[lang]||'';
+}
+function onEditorInput() {
+  editorContents[currentLang] = document.getElementById('code-editor').value;
+  updateLineNumbers(); updateEditorStats();
+}
+function updateLineNumbers() {
+  const lines = document.getElementById('code-editor').value.split('\n').length;
+  document.getElementById('line-numbers').innerHTML = Array.from({length:lines},(_,i)=>`<span>${i+1}</span>`).join('');
+}
+function syncScroll(el) { document.getElementById('line-numbers').scrollTop = el.scrollTop; }
+function updateEditorStats() {
+  const code = document.getElementById('code-editor').value;
+  const pos  = document.getElementById('code-editor').selectionStart;
+  const lines = code.substring(0,pos).split('\n');
+  document.getElementById('editor-cursor-pos').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+  document.getElementById('editor-char-count').textContent = `${code.length} chars`;
+}
+function handleEditorKey(e) {
+  if (e.key==='Tab') {
+    e.preventDefault();
+    const el=e.target, s=el.selectionStart, end=el.selectionEnd;
+    const sp=' '.repeat(settings.tabSize||2);
+    el.value = el.value.substring(0,s)+sp+el.value.substring(end);
+    el.selectionStart=el.selectionEnd=s+sp.length;
+    onEditorInput();
+  }
+}
+function clearEditor() { document.getElementById('code-editor').value=''; editorContents[currentLang]=''; updateLineNumbers(); updateEditorStats(); clearPreview(); toast('Editor cleared','info'); }
+function copyEditorCode() {
+  const code = document.getElementById('code-editor').value;
+  if (!code) { toast('Nothing to copy','error'); return; }
+  navigator.clipboard?.writeText(code).then(()=>toast('Copied!','success')).catch(()=>toast('Copy failed','error'));
+}
+function runPreview() {
+  const code=document.getElementById('code-editor').value;
+  if (!code.trim()) { toast('Write some code first!','error'); return; }
+  const frame=document.getElementById('preview-frame');
+  const ph=document.getElementById('preview-placeholder');
+  if (currentLang==='html'||currentLang==='css') {
+    ph.style.display='none'; frame.style.display='block';
+    const content = currentLang==='css' ? `<html><head><style>${code}</style></head><body><h1>CSS Preview</h1></body></html>` : code;
+    const doc=frame.contentDocument||frame.contentWindow.document;
+    doc.open(); doc.write(content); doc.close();
+    logConsole('SUCCESS','Preview rendered');
+  } else if (currentLang==='js') {
+    clearPreview();
+    const logs=[];
+    const fc={log:(...a)=>logs.push(['INFO',a.map(String).join(' ')]),error:(...a)=>logs.push(['ERROR',a.map(String).join(' ')]),warn:(...a)=>logs.push(['WARN',a.map(String).join(' ')])};
+    try { new Function('console',code)(fc); logs.forEach(([t,m])=>logConsole(t,m)); logConsole('SUCCESS','Script executed'); }
+    catch(e) { logConsole('ERROR',e.message); toast('Error: '+e.message,'error'); }
+  } else { logConsole('INFO','Python execution requires server-side runner'); toast('Python needs a backend runner','info'); }
+}
+function clearPreview() { document.getElementById('preview-frame').style.display='none'; document.getElementById('preview-placeholder').style.display='flex'; }
+function clearConsole() { document.getElementById('console-output').innerHTML='<div class="console-line info">[INFO] Console cleared.</div>'; }
+function logConsole(type,msg) {
+  const area=document.getElementById('console-output');
+  const cls={INFO:'info',SUCCESS:'success',ERROR:'error',WARN:'warn'}[type]||'info';
+  area.innerHTML+=`<div class="console-line ${cls}">[${type}] ${new Date().toLocaleTimeString()} -- ${esc(msg)}</div>`;
+  area.scrollTop=area.scrollHeight;
+}
+
+// ── SNIPPETS ───────────────────────────────────────────────
+async function saveSnippet() {
+  const name=document.getElementById('snippet-name').value.trim();
+  if (!name) { toast('Snippet name required','error'); return; }
+  const r = await api('POST','/api/snippets',{name, lang:currentLang, code:document.getElementById('code-editor').value, username:currentUser.username});
+  if (!r.ok) { toast(r.error,'error'); return; }
+  document.getElementById('snippet-name').value='';
+  closeModal('save-editor-modal');
+  toast(`Snippet "${name}" saved!`,'success');
+  loadSnippetList(); updateStats();
+}
+async function loadSnippetList() {
+  const r = await api('GET', `/api/snippets?username=${currentUser?.username||''}`);
+  const sel = document.getElementById('snippet-select');
+  if (!r.ok) return;
+  sel.innerHTML = '<option value="">-- Load snippet --</option>' +
+    r.snippets.map(s=>`<option value="${s.id}">[${(s.lang||'?').toUpperCase()}] ${esc(s.name)}</option>`).join('');
+}
+async function loadSnippet(id) {
+  if (!id) return;
+  const r = await api('GET', `/api/snippets?username=${currentUser?.username||''}`);
+  if (!r.ok) return;
+  const s = r.snippets.find(x=>String(x.id)===String(id));
+  if (!s) return;
+  switchLang(s.lang);
+  editorContents[s.lang] = s.code;
+  document.getElementById('code-editor').value = s.code;
+  updateLineNumbers(); updateEditorStats();
+  toast(`Snippet "${s.name}" loaded`,'success');
+}
+function editorIndent() {
+  const el=document.getElementById('code-editor');
+  const sp=' '.repeat(settings.tabSize||2);
+  const lines=el.value.split('\n');
+  const start=el.selectionStart, end=el.selectionEnd;
+  let pos=0, sl=-1, el2=-1;
+  lines.forEach((l,i)=>{ if(pos+l.length>=start&&sl<0)sl=i; if(pos+l.length>=end&&el2<0)el2=i; pos+=l.length+1; });
+  if(sl<0)sl=0; if(el2<0)el2=lines.length-1;
+  for(let i=sl;i<=el2;i++) lines[i]=sp+lines[i];
+  el.value=lines.join('\n'); onEditorInput(); toast('Indented','info');
+}
+function editorFindReplace() {
+  const f=prompt('Find:'); if(!f)return;
+  const rep=prompt('Replace with:'); if(rep===null)return;
+  const el=document.getElementById('code-editor');
+  const prev=el.value;
+  el.value=el.value.split(f).join(rep);
+  const cnt=(prev.match(new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'))||[]).length;
+  onEditorInput(); toast(`Replaced ${cnt} occurrence(s)`,'success');
+}
+
+// ── DATABASE VIEWER ────────────────────────────────────────
+async function renderDBViewer() {
+  const overview  = document.getElementById('db-overview');
+  const tableSec  = document.getElementById('db-tables-section');
+  const statsR    = await api('GET','/api/stats');
+  if (!statsR.ok) { overview.innerHTML='<div style="color:var(--danger);padding:20px">Could not connect to server.</div>'; return; }
+  const s = statsR.stats;
+  const stores = [{k:'users',l:'Users',c:s.users},{k:'channels',l:'Channels',c:s.channels},{k:'messages',l:'Messages',c:s.messages},{k:'projects',l:'Projects',c:s.projects},{k:'snippets',l:'Snippets',c:s.snippets}];
+  overview.innerHTML = stores.map(st=>`
+    <div class="panel" style="padding:20px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:4px">${st.l}</div>
+      <div style="font-size:28px;font-weight:700;color:var(--neon)">${st.c}</div>
+      <div style="font-size:11px;color:var(--muted)">records in SQLite</div>
+    </div>`).join('');
+
+  // Show tables with data
+  const tables = [
+    {name:'users',    url:`/api/users/search?q=`},
+    {name:'channels', url:`/api/channels?username=${currentUser?.username||''}`},
+    {name:'projects', url:`/api/projects?username=${currentUser?.username||''}`},
+  ];
+  let html='';
+  for (const t of tables) {
+    const r = await api('GET', t.url);
+    const items = r.users || r.channels || r.projects || [];
+    html += `<div class="panel" style="padding:20px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;font-weight:600">${t.name}</h3>
+        <span class="badge badge-cyan">${items.length} rows</span>
+      </div>`;
+    if (!items.length) { html += '<div style="color:var(--muted);font-size:13px">Empty.</div>'; }
+    else {
+      const keys = Object.keys(items[0]).filter(k=>k!=='password').slice(0,7);
+      html += `<div style="overflow-x:auto"><table class="db-table"><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>`;
+      html += items.slice(0,15).map(row=>`<tr>${keys.map(k=>`<td title="${esc(String(row[k]||''))}">${esc(String(row[k]||'').substring(0,40))}</td>`).join('')}</tr>`).join('');
+      html += '</tbody></table></div>';
+    }
+    html += '</div>';
+  }
+  tableSec.innerHTML = html;
+}
+
+async function exportDB() {
+  const [users,channels,projects,snippets] = await Promise.all([
+    api('GET','/api/users/search?q='),
+    api('GET',`/api/channels?username=${currentUser?.username||''}`),
+    api('GET',`/api/projects?username=${currentUser?.username||''}`),
+    api('GET',`/api/snippets?username=${currentUser?.username||''}`),
+  ]);
+  const data = { users:users.users||[], channels:channels.channels||[], projects:projects.projects||[], snippets:snippets.snippets||[] };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download='codecollab-export.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported!','success');
+}
+function confirmClearDB() {
+  document.getElementById('confirm-msg').textContent = 'This will delete ALL users, messages, projects and channels. Are you sure?';
+  document.getElementById('confirm-action-btn').onclick = async () => {
+    toast('Clear all not available from UI -- delete codecollab.db manually to reset.','info');
+    closeModal('confirm-modal');
+  };
+  openModal('confirm-modal');
+}
+
+// ── UTILS ──────────────────────────────────────────────────
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── BOOT ───────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  setDbStatus('loading');
+  const r = await api('GET','/api/stats');
+  if (!r.ok) {
+    setDbStatus('error');
+    toast('Cannot reach server. Make sure server.js is running on port 3000.','error');
+  } else {
+    setDbStatus('ready');
+  }
+  await checkSession();
+  // Init editor
+  document.getElementById('code-editor').value = defaultCode('html');
+  updateLineNumbers(); updateEditorStats();
+  document.getElementById('code-editor').addEventListener('click', updateEditorStats);
+  document.getElementById('code-editor').addEventListener('keyup', updateEditorStats);
+});
+</script>
+</body>
+</html>
